@@ -1,0 +1,82 @@
+name: 13.ban-word
+
+run-name: ban-word | ${{ github.event.pull_request.title }}
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [edited]
+
+jobs:
+  checkPRComments:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Analyze PR comment
+        id: analyze
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const patterns = ["갑자기", "무지성", "무조건", "그냥", "그래 보인다", "보인다", "굳이"];      
+            const oldComment = context.payload.comment.body;
+
+            console.log('Old Comment >> ', oldComment);
+
+            let match = false;
+            let newComment = oldComment;
+
+            for (const pattern of patterns) {
+              if (oldComment.includes(pattern)) {
+                match = true;
+                newComment = newComment.replace(new RegExp(pattern, 'g'), '■■■■■');
+              }
+            }
+
+            console.log('New Comment >> ', newComment);
+
+            if (match) {
+              return newComment;
+            }
+
+      - name: Update Comment
+        if: steps.analyze.outputs.result != 'undefined'
+        uses: actions/github-script@v6
+        with:
+          result-encoding: json
+          script: |
+            const eventName = '${{ github.event_name }}';
+            const warningComment = '> 금지어 사용 ["갑자기", "무지성", "무조건", "그냥", "그래 보인다", "보인다", "굳이"]';
+            const cleanedUnicodeWarningComment = warningComment.replace(/\u200D/g, '');
+            const newComment = `${{ steps.analyze.outputs.result }}`
+              .split('\n')
+              .map((line) => line.replace(cleanedUnicodeWarningComment, ''))
+              .join('\n')
+              .trim();
+
+            if (eventName === 'issue_comment') {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                body: [
+                  newComment,
+                  warningComment,
+                ].join('\n\n')  
+              });
+            } else if (eventName === 'pull_request_review_comment') {
+              await github.rest.pulls.updateReviewComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                body: [
+                  newComment,
+                  warningComment
+                ].join('\n\n')
+              });
+            }
