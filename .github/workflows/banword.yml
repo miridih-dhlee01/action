@@ -53,7 +53,10 @@ jobs:
             const eventName = '${{ github.event_name }}';
             const warningComment = '> 금지어 사용 ["갑자기", "무지성", "무조건", "그냥", "그래 보인다", "보인다", "굳이"]';
             const cleanedUnicodeWarningComment = warningComment.replace(/\u200D/g, '');
-            const newComment = `${{ steps.analyze.outputs.result.replace(/`/g, '\\`') }}`
+            const a = ${{ steps.analyze.outputs.result }};
+            console.log('로그뜨나?', a);
+            
+            const newComment = `${{ steps.analyze.outputs.result }}`
               .split('\n')
               .map((line) => line.replace(cleanedUnicodeWarningComment, ''))
               .join('\n')
