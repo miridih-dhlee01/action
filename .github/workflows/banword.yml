@@ -6,7 +6,7 @@ on:
   issue_comment:
     types: [created, edited]
   pull_request_review_comment:
-    types: [edited]
+    types: [created, edited]
 
 jobs:
   checkPRComments:
